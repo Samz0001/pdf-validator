@@ -33,7 +33,7 @@ def run_validation(
     link_counts = run_integrity(cmp, ref, test, ref_path, test_path, opts)
     cmp.issues = drop_ignored(cmp.issues, opts.ignore_regions)
 
-    visual = compare_documents(ref_path, test_path, opts.dpi, opts.diff_threshold) if opts.visual else None
+    visual = compare_documents(ref_path, test_path, opts.dpi, opts.diff_threshold, opts.pos_tol) if opts.visual else None
     result = build_result(ref_name, test_name, ref, test, cmp, visual, opts.ignore_regions)
     result.ocr_pages = sorted({p.number for p in (*ref.pages, *test.pages) if p.ocr})
     result.checks = build_checks(result.issues, ref, test, opts, link_counts)

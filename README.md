@@ -26,7 +26,7 @@ cd frontend && npm install && npm run dev # :5173 (proxies /api)
 | Text diff | difflib | Line-level alignment → *missing / extra / changed* text |
 | Format & layout | custom | Per matched line: font, size, colour, alignment, horizontal shift, line-spacing change; per page: margins, size, rotation, structure |
 | Visual | OpenCV, NumPy, scikit-image | Render pages, SSIM + pixel diff, merged difference regions, heatmap overlay |
-| Highlight | PyMuPDF | Annotated candidate PDF (red/orange/yellow by severity; dashed blue = content missing here) |
+| Highlight | PyMuPDF | Annotated candidate PDF (red/purple/blue by severity; dashed grey = content missing here) |
 | Report | ReportLab | Scores, charts, issue table, visual diffs |
 | Integrity | PyMuPDF, pikepdf, pyspellchecker, Tesseract | Hyperlinks, unfilled placeholders, data formats (dates/amounts/emails/phone/GSTIN/PAN), spelling of new text, table cells, images (replaced/stretched/low-DPI), accessibility (tags, language, alt text, contrast), security (JavaScript, launch actions, attachments, PDF/A, metadata leaks), bookmarks & form fields, custom must/must-not rules, optional OCR |
 

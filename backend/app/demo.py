@@ -11,7 +11,7 @@ RED = (0.80, 0.10, 0.10)
 def _page1(doc: pymupdf.Document, custom: bool) -> None:
     p = doc.new_page()
     p.draw_rect(pymupdf.Rect(0, 0, 595, 48), color=None, fill=NAVY)
-    p.insert_text((72, 32), "ZEONIX GLOBAL PVT. LTD.", fontsize=12, fontname="hebo", color=(1, 1, 1))
+    p.insert_text((72, 32), "EXAMPLE COMPANY LTD.", fontsize=12, fontname="hebo", color=(1, 1, 1))
     p.insert_text((72, 100), "Offer Letter", fontsize=26 if custom else 22, fontname="hebo", color=RED if custom else NAVY)
     p.insert_text((72, 124), "Confidential - for the addressee only", fontsize=9, fontname="heit", color=GREY)
 
@@ -66,11 +66,11 @@ def _page2(doc: pymupdf.Document, custom: bool) -> None:
     for t in clauses:
         p.insert_text((x, y), t, fontsize=11, fontname="helv")
         y += 26
-    p.insert_text((x, 300), "Benefits handbook: zeonixglobal.com/handbook", fontsize=11, fontname="helv",
+    p.insert_text((x, 300), "Benefits handbook: examplecompany.com/handbook", fontsize=11, fontname="helv",
                   color=(0.1, 0.3, 0.8))
-    url = "http://zeonix-global.com/handbook" if custom else "https://zeonixglobal.com/handbook"
+    url = "http://example-company.com/handbook" if custom else "https://examplecompany.com/handbook"
     p.insert_link({"kind": pymupdf.LINK_URI, "from": pymupdf.Rect(x, 288, x + 250, 304), "uri": url})
-    p.insert_text((72, 780), "Zeonix Global Pvt. Ltd. - Chandigarh, India", fontsize=8, fontname="helv",
+    p.insert_text((72, 780), "Example Company Ltd. - Chandigarh, India", fontsize=8, fontname="helv",
                   color=(0, 0, 0) if custom else GREY)
 
 

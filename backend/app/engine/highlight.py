@@ -7,14 +7,14 @@ from ..schemas import Issue, Severity
 
 COLORS = {
     Severity.critical: (0.94, 0.27, 0.27),
-    Severity.major: (0.98, 0.57, 0.09),
-    Severity.minor: (0.92, 0.75, 0.10),
+    Severity.major: (0.55, 0.36, 0.96),
+    Severity.minor: (0.18, 0.53, 0.88),
 }
-MISSING_COLOR = (0.23, 0.51, 0.96)
+MISSING_COLOR = (0.35, 0.40, 0.47)
 
 
 def write_highlighted(test_path: str, out_path: str, issues: list[Issue]) -> int:
-    """Annotate the candidate PDF. Missing reference content is drawn as a dashed blue box at its expected spot."""
+    """Annotate the candidate PDF. Missing reference content is drawn as a dashed grey box at its expected spot."""
     count = 0
     with pymupdf.open(test_path) as doc:
         for iss in issues:

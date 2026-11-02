@@ -24,7 +24,7 @@ def render(doc: pymupdf.Document, idx: int, dpi: int) -> np.ndarray:
     return np.frombuffer(pix.samples, dtype=np.uint8).reshape(pix.height, pix.width, 3).copy()
 
 
-def compare_page(ref: np.ndarray, test: np.ndarray, page: int, dpi: int, threshold: int) -> VisualPage:
+def compare_page(ref: np.ndarray, test: np.ndarray, page: int, dpi: int, threshold: int, tol_pt: float = 0.0) -> VisualPage:
     h, w = ref.shape[:2]
     if test.shape[:2] != (h, w):
         test = cv2.resize(test, (w, h), interpolation=cv2.INTER_AREA)
@@ -33,7 +33,19 @@ def compare_page(ref: np.ndarray, test: np.ndarray, page: int, dpi: int, thresho
     g2 = cv2.cvtColor(test, cv2.COLOR_RGB2GRAY)
     score, full = structural_similarity(g1, g2, full=True, data_range=255)
 
-    absdiff = cv2.absdiff(cv2.GaussianBlur(g1, (3, 3), 0), cv2.GaussianBlur(g2, (3, 3), 0))
+    b1, b2 = cv2.GaussianBlur(g1, (3, 3), 0), cv2.GaussianBlur(g2, (3, 3), 0)
+    r = int(round(tol_pt * dpi / 72.0))
+    if r >= 1:
+        # forgive sub-tolerance shifts: a pixel only differs if it is outside the range of the other
+        # page's pixels within r px, so a slightly moved glyph is not a visual mismatch
+        ker = cv2.getStructuringElement(cv2.MORPH_RECT, (2 * r + 1, 2 * r + 1))
+        lo, hi = cv2.erode(b2, ker), cv2.dilate(b2, ker)
+        lo1, hi1 = cv2.erode(b1, ker), cv2.dilate(b1, ker)
+        absdiff = np.maximum(np.maximum(b1.astype(np.int16) - hi, lo.astype(np.int16) - b1), 0)
+        absdiff = np.minimum(absdiff, np.maximum(np.maximum(b2.astype(np.int16) - hi1, lo1.astype(np.int16) - b2), 0))
+        absdiff = absdiff.astype(np.uint8)
+    else:
+        absdiff = cv2.absdiff(b1, b2)
     mask = (absdiff > threshold).astype(np.uint8) * 255
     diff_pct = float(np.count_nonzero(mask)) / mask.size * 100
 
@@ -59,9 +71,9 @@ def compare_page(ref: np.ndarray, test: np.ndarray, page: int, dpi: int, thresho
     return VisualPage(page, float(score), diff_pct, regions, Image.fromarray(base))
 
 
-def compare_documents(ref_path: str, test_path: str, dpi: int, threshold: int) -> list[VisualPage]:
+def compare_documents(ref_path: str, test_path: str, dpi: int, threshold: int, tol_pt: float = 0.0) -> list[VisualPage]:
     out: list[VisualPage] = []
     with pymupdf.open(ref_path) as rd, pymupdf.open(test_path) as td:
         for i in range(min(len(rd), len(td))):
-            out.append(compare_page(render(rd, i, dpi), render(td, i, dpi), i + 1, dpi, threshold))
+            out.append(compare_page(render(rd, i, dpi), render(td, i, dpi), i + 1, dpi, threshold, tol_pt))
     return out

@@ -3,6 +3,8 @@ from __future__ import annotations
 
 import difflib
 import math
+import re
+from functools import reduce
 from collections import Counter, defaultdict
 
 from ..schemas import Category as C
@@ -14,6 +16,13 @@ from .extract import DocData, Line, PageData
 def _norm(text: str, ignore_case: bool) -> str:
     t = " ".join(text.split())
     return t.lower() if ignore_case else t
+
+
+_NUM = re.compile(r"\d+(?:[.,]\d+)*")
+
+
+def _numbers(text: str) -> list[str]:
+    return _NUM.findall(text)
 
 
 def _rgb(h: str) -> tuple[int, int, int]:
@@ -127,6 +136,9 @@ class Comparer:
 
         rk = [_norm(l.text, o.ignore_case) for l in rp.lines]
         tk = [_norm(l.text, o.ignore_case) for l in tp.lines]
+        if rk and rk != tk and " ".join(rk).split() == " ".join(tk).split():
+            self._reflowed(pn, rp, tp)
+            return
         sm = difflib.SequenceMatcher(None, rk, tk, autojunk=False)
 
         pairs: list[tuple[Line, Line, float]] = []
@@ -158,8 +170,13 @@ class Comparer:
                         b = tp.lines[best]
                         pairs.append((a, b, best_r))
                         matched_chars += best_r * (len(a.text) + len(b.text))
-                        sev = S.major if best_r < 0.85 else S.minor
-                        self.add(pn, C.text_changed, sev, f"Text changed ({best_r:.0%} similar)",
+                        num_changed = _numbers(a.text) != _numbers(b.text)
+                        # a changed figure (amount, date, id) is high-risk even when the line is 98% identical
+                        sev = S.major if best_r < 0.85 or num_changed else S.minor
+                        msg = f"Text changed ({best_r:.0%} similar)"
+                        if num_changed:
+                            msg = f"Number/date changed ({best_r:.0%} similar)"
+                        self.add(pn, C.text_changed, sev, msg,
                                  _box(a.bbox), _box(b.bbox), _short(a.text), _short(b.text))
                     else:
                         self._missing(pn, a)
@@ -181,6 +198,15 @@ class Comparer:
 
         self._margins(pn, rp, tp)
         self.page_stats[pn] = dict(text_sim=text_sim, matched=len(pairs), fmt_bad=fmt_bad, layout_bad=layout_bad,
+                                   w=max(rp.chars, tp.chars, 1), in_test=True, in_ref=True)
+
+    def _reflowed(self, pn, rp: PageData, tp: PageData) -> None:
+        """Same words in the same order, only the line breaks moved: report once instead of per line."""
+        ub = lambda lines: _box(reduce(lambda x, y: _union(x, y), (l.bbox for l in lines)))
+        self.add(pn, C.spacing, S.minor, "Text is identical but wraps onto different lines (reflowed)",
+                 ub(rp.lines), ub(tp.lines), f"{len(rp.lines)} lines", f"{len(tp.lines)} lines")
+        self._margins(pn, rp, tp)
+        self.page_stats[pn] = dict(text_sim=1.0, matched=len(rp.lines), fmt_bad=0, layout_bad=1,
                                    w=max(rp.chars, tp.chars, 1), in_test=True, in_ref=True)
 
     def _missing(self, pn, a: Line):

@@ -1,11 +1,12 @@
 import * as pdfjs from "pdfjs-dist";
 import workerUrl from "pdfjs-dist/build/pdf.worker.min.mjs?url";
 import { useEffect, useRef, useState, type RefObject } from "react";
-import { Layer, Rect, Stage } from "react-konva";
+import { Circle, Group, Layer, Rect, Stage, Text } from "react-konva";
 import { ChevronLeft, ChevronRight, EyeOff, Loader2, Pause, Play, RefreshCw, X } from "lucide-react";
 import { fileUrl } from "../api";
 import { CATEGORY_LABEL, SEVERITY_COLOR } from "../theme";
-import type { IgnoreRegion, Issue, Job } from "../types";
+import { EXPLAIN, SEVERITY_NOTE } from "../explain";
+import type { IgnoreRegion, Issue, Job, Severity } from "../types";
 
 pdfjs.GlobalWorkerOptions.workerSrc = workerUrl;
 
@@ -119,19 +120,28 @@ function Pane({ title, url, page, issues, side, selected, onSelect, show, region
                         width={(r.bbox[2] - r.bbox[0]) * dims.scale} height={(r.bbox[3] - r.bbox[1]) * dims.scale}
                         stroke={REGION} strokeWidth={1.5} dash={[6, 4]} fill={REGION + "40"} listening={false} />
                     ))}
-                    {show && issues.map((i) => {
+                    {show && issues.map((i, n) => {
                       const b = side === "ref" ? i.bbox_ref : i.bbox_test;
                       if (!b) return null;
                       const sel = i.id === selected;
                       const col = SEVERITY_COLOR[i.severity];
+                      const x = b[0] * dims.scale - 1, y = b[1] * dims.scale - 1;
+                      const enter = (e: { target: { getStage: () => { container: () => HTMLElement } | null } }) => {
+                        setHover(i); const c = e.target.getStage()?.container(); if (c) c.style.cursor = "pointer";
+                      };
+                      const leave = (e: { target: { getStage: () => { container: () => HTMLElement } | null } }) => {
+                        setHover(null); const c = e.target.getStage()?.container(); if (c) c.style.cursor = "default";
+                      };
                       return (
-                        <Rect key={i.id} x={b[0] * dims.scale - 1} y={b[1] * dims.scale - 1}
-                          width={(b[2] - b[0]) * dims.scale + 2} height={(b[3] - b[1]) * dims.scale + 2}
-                          stroke={col} strokeWidth={sel ? 3 : 1.25} fill={col + (sel ? "55" : "1f")}
-                          shadowBlur={sel ? 12 : 0} shadowColor={col} listening={!draw}
-                          onClick={() => onSelect(sel ? null : i.id)}
-                          onMouseEnter={(e) => { setHover(i); const c = e.target.getStage()?.container(); if (c) c.style.cursor = "pointer"; }}
-                          onMouseLeave={(e) => { setHover(null); const c = e.target.getStage()?.container(); if (c) c.style.cursor = "default"; }} />
+                        <Group key={i.id} listening={!draw} onClick={() => onSelect(sel ? null : i.id)} onMouseEnter={enter} onMouseLeave={leave}>
+                          <Rect x={x} y={y}
+                            width={(b[2] - b[0]) * dims.scale + 2} height={(b[3] - b[1]) * dims.scale + 2}
+                            stroke={col} strokeWidth={sel ? 3 : 1.25} fill={col + (sel ? "55" : "1f")}
+                            shadowBlur={sel ? 12 : 0} shadowColor={col} />
+                          <Circle x={Math.max(9, x)} y={Math.max(9, y)} radius={9} fill={col} stroke="#fff" strokeWidth={1.5} />
+                          <Text x={Math.max(9, x) - 9} y={Math.max(9, y) - 9} width={18} height={18} align="center" verticalAlign="middle"
+                            text={String(n + 1)} fontSize={n >= 9 ? 9 : 11} fontStyle="bold" fill="#fff" listening={false} />
+                        </Group>
                       );
                     })}
                     {drag && (
@@ -143,11 +153,14 @@ function Pane({ title, url, page, issues, side, selected, onSelect, show, region
               </div>
             )}
             {hover && !draw && (
-              <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-lg bg-slate-950/95 p-2 text-xs text-slate-100 shadow-xl">
-                <b style={{ color: SEVERITY_COLOR[hover.severity] }}>{CATEGORY_LABEL[hover.category] ?? hover.category}</b> — {hover.message}
-                {(hover.expected || hover.actual) && (
-                  <div className="mt-0.5 text-slate-400">{hover.expected} {hover.expected && hover.actual && "→"} {hover.actual}</div>
-                )}
+              <div className="pointer-events-none absolute bottom-2 left-2 right-2 rounded-lg bg-slate-950/95 p-2.5 text-xs text-slate-100 shadow-xl">
+                <div className="flex items-center gap-2">
+                  <span className="rounded px-1.5 py-0.5 text-[10px] font-bold uppercase text-white" style={{ background: SEVERITY_COLOR[hover.severity] }}>{hover.severity}</span>
+                  <b>{EXPLAIN[hover.category]?.title ?? CATEGORY_LABEL[hover.category] ?? hover.category}</b>
+                </div>
+                <div className="mt-1 text-slate-300">{hover.message}</div>
+                <div className="mt-1 text-slate-400">{EXPLAIN[hover.category]?.meaning}</div>
+                <div className="mt-1 text-slate-500">Click for details</div>
               </div>
             )}
           </>
@@ -229,6 +242,75 @@ function Overlay({ job, page, mode }: { job: Job; page: number; mode: "slider" |
   );
 }
 
+const LEGEND: { sev: Severity; label: string; hint: string }[] = [
+  { sev: "critical", label: "Critical", hint: "changed/missing text, placeholders, security — forces FAIL" },
+  { sev: "major", label: "Major", hint: "font, size, layout shift, changed link — needs review" },
+  { sev: "minor", label: "Minor", hint: "small spacing or colour drift" },
+];
+
+function HighlightLegend({ hasRegions }: { hasRegions: boolean }) {
+  return (
+    <div className="mb-4 flex flex-wrap items-center gap-x-5 gap-y-2 rounded-xl border border-white/10 bg-white/5 px-3 py-2 text-xs text-slate-300"
+      role="list" aria-label="Highlight colour legend">
+      <span className="font-medium uppercase tracking-wide text-slate-400">Legend</span>
+      {LEGEND.map(({ sev, label, hint }) => (
+        <span key={sev} role="listitem" className="inline-flex items-center gap-1.5" title={hint}>
+          <span className="h-3 w-3 rounded-sm border" style={{ borderColor: SEVERITY_COLOR[sev], background: SEVERITY_COLOR[sev] + "55" }} />
+          <b style={{ color: SEVERITY_COLOR[sev] }}>{label}</b>
+          <span className="hidden text-slate-400 lg:inline">· {hint}</span>
+        </span>
+      ))}
+      {hasRegions && (
+        <span role="listitem" className="inline-flex items-center gap-1.5">
+          <span className="h-3 w-3 rounded-sm border border-dashed" style={{ borderColor: REGION, background: REGION + "40" }} />
+          <b className="text-slate-300">Ignored region</b>
+        </span>
+      )}
+    </div>
+  );
+}
+
+const isHex = (v: string | null) => !!v && /^#[0-9a-fA-F]{6}$/.test(v.trim());
+
+function Value({ label, value, swatch }: { label: string; value: string | null; swatch: boolean }) {
+  return (
+    <div className="min-w-0 flex-1 rounded-lg bg-white/5 p-2">
+      <div className="text-[10px] font-medium uppercase tracking-wide text-slate-400">{label}</div>
+      <div className="mt-0.5 flex items-center gap-1.5 break-words text-slate-100">
+        {swatch && isHex(value) && <span className="h-3.5 w-3.5 shrink-0 rounded border border-white/30" style={{ background: value!.trim() }} />}
+        {value ?? <span className="text-slate-500">nothing</span>}
+      </div>
+    </div>
+  );
+}
+
+function IssueDetail({ issue, num, onClose }: { issue: Issue; num: number; onClose: () => void }) {
+  const ex = EXPLAIN[issue.category];
+  const col = SEVERITY_COLOR[issue.severity];
+  return (
+    <div className="mt-4 rounded-xl border bg-white/5 p-4 text-sm" style={{ borderColor: col + "88" }}>
+      <div className="flex items-start gap-3">
+        <span className="grid h-6 w-6 shrink-0 place-items-center rounded-full text-xs font-bold text-white" style={{ background: col }}>{num || "•"}</span>
+        <div className="min-w-0 flex-1">
+          <div className="font-semibold text-slate-100">{ex?.title ?? CATEGORY_LABEL[issue.category]}</div>
+          <div className="text-xs" style={{ color: col }}>{SEVERITY_NOTE[issue.severity]} · page {issue.page}</div>
+        </div>
+        <button aria-label="Close details" className="text-slate-400 hover:text-white" onClick={onClose}><X className="h-4 w-4" /></button>
+      </div>
+      <p className="mt-3 text-slate-200">{issue.message}</p>
+      {ex && <p className="mt-1 text-slate-400">{ex.meaning}</p>}
+      {(issue.expected || issue.actual) && (
+        <div className="mt-3 flex flex-col gap-2 sm:flex-row sm:items-stretch">
+          <Value label="Reference (expected)" value={issue.expected} swatch={issue.category === "color"} />
+          <div className="hidden self-center text-slate-500 sm:block">→</div>
+          <Value label="Candidate (found)" value={issue.actual} swatch={issue.category === "color"} />
+        </div>
+      )}
+      {ex && <p className="mt-3 text-slate-200"><b className="text-emerald-300">How to fix:</b> {ex.fix}</p>}
+    </div>
+  );
+}
+
 export default function Viewer({ job, issues, selected, onSelect, page, setPage, regions, setRegions, onRerun, rerunning, readOnly }: {
   job: Job; issues: Issue[]; selected: string | null; onSelect: (id: string | null) => void;
   page: number; setPage: (p: number) => void;
@@ -241,6 +323,7 @@ export default function Viewer({ job, issues, selected, onSelect, page, setPage,
   const [allPages, setAllPages] = useState(false);
   const total = Math.max(r.summary.pages_reference, r.summary.pages_candidate);
   const pageIssues = issues.filter((i) => i.page === page);
+  const picked = pageIssues.find((i) => i.id === selected) ?? null;
   const diff = r.pages.find((p) => p.page === page)?.diff_image;
   const here = regions.filter((g) => g.page === 0 || g.page === page);
   const addRegion = (bbox: number[]) => setRegions([...regions, { page: allPages ? 0 : page, bbox }]);
@@ -300,6 +383,20 @@ export default function Viewer({ job, issues, selected, onSelect, page, setPage,
         </div>
       )}
 
+      {mode === "side" && show && <HighlightLegend hasRegions={here.length > 0} />}
+
+      {mode === "side" && show && pageIssues.length > 0 && (
+        <div className="mb-4 flex flex-wrap gap-1.5" aria-label="Issues on this page">
+          {pageIssues.map((i, n) => (
+            <button key={i.id} onClick={() => onSelect(selected === i.id ? null : i.id)}
+              className={`inline-flex items-center gap-1.5 rounded-full border px-2 py-0.5 text-xs ${selected === i.id ? "border-white/40 bg-white/15 text-white" : "border-white/10 text-slate-300 hover:bg-white/10"}`}>
+              <span className="grid h-4 w-4 place-items-center rounded-full text-[9px] font-bold text-white" style={{ background: SEVERITY_COLOR[i.severity] }}>{n + 1}</span>
+              {EXPLAIN[i.category]?.title ?? i.category}
+            </button>
+          ))}
+        </div>
+      )}
+
       {mode === "side" ? (
         <div className="grid gap-4 md:grid-cols-2">
           <Pane title="Reference" url={fileUrl(job.id, "reference.pdf")} page={page} issues={pageIssues} side="ref" selected={selected} onSelect={onSelect} show={show} regions={here} />
@@ -316,6 +413,7 @@ export default function Viewer({ job, issues, selected, onSelect, page, setPage,
       ) : (
         <div className="py-16 text-center text-sm text-slate-400">No visual diff for this page (page missing in one document, or visual comparison disabled).</div>
       )}
+      {mode === "side" && picked && <IssueDetail issue={picked} num={pageIssues.indexOf(picked) + 1} onClose={() => onSelect(null)} />}
     </section>
   );
 }

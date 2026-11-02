@@ -2,8 +2,8 @@ import type { Category, Severity } from "./types";
 
 export const SEVERITY_COLOR: Record<Severity, string> = {
   critical: "#c2412d",
-  major: "#dd7a2a",
-  minor: "#d1a62a",
+  major: "#8b5cf6",
+  minor: "#2f86e0",
 };
 
 export const VERDICT_STYLE = {
