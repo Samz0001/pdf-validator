@@ -1,0 +1,129 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/*
+ * DocuDiff — "proofreading desk" look: warm paper, ink type, hairline rules, one ink-blue accent and a
+ * highlighter yellow used only for emphasis. Dark is the base class set; html.light remaps it to paper.
+ */
+
+:root { color-scheme: dark; }
+body {
+  @apply bg-slate-950 text-slate-200 antialiased font-sans;
+}
+::selection { background: #f5d547; color: #1c1a16; }
+:focus-visible { outline: 2px solid #6a90c6; outline-offset: 2px; }
+
+@layer components {
+  .card { @apply rounded-md border border-white/10 bg-slate-900 p-5; }
+  .card-title { @apply font-serif text-[1.05rem] font-medium leading-snug text-slate-100 mb-0.5; }
+  .card-sub { @apply text-xs text-slate-400 mb-4; }
+  .page-title { @apply font-serif text-[2rem] font-normal leading-tight tracking-[-0.01em] text-white; }
+  .eyebrow { @apply text-[11px] font-medium uppercase tracking-[0.12em] text-slate-500; }
+  .num { @apply font-mono tabular-nums; }
+  .btn { @apply inline-flex items-center gap-2 rounded px-3.5 py-2 text-sm font-medium transition-colors disabled:opacity-40 disabled:cursor-not-allowed; }
+  .btn-primary { @apply btn bg-slate-100 text-slate-950 hover:bg-white; }
+  .btn-ghost { @apply btn border border-white/15 bg-transparent text-slate-200 hover:bg-white/5; }
+  .chip { @apply inline-flex items-center rounded-sm px-1.5 py-px text-[11px] font-medium; }
+}
+
+.recharts-tooltip-wrapper { outline: none; }
+.recharts-cartesian-axis-tick-value { font-family: "IBM Plex Mono", ui-monospace, monospace; }
+
+/* ---------- motion: quiet and short ---------- */
+@keyframes shimmer { 100% { transform: translateX(100%) } }
+@keyframes fade-up { from { opacity: 0; transform: translateY(4px) } to { opacity: 1; transform: none } }
+@keyframes pulse-box { 0%,100% { box-shadow: 0 0 0 0 rgba(185,28,28,.45) } 70% { box-shadow: 0 0 0 8px rgba(185,28,28,0) } }
+@keyframes pop { from { opacity: 0 } to { opacity: 1 } }
+
+.animate-fade-up { animation: fade-up .3s ease-out both; }
+.animate-pop { animation: pop .2s ease-out both; }
+.animate-float, .animate-float-slow, .animate-drift { animation: none; }
+.pulse-box { animation: pulse-box 2.2s infinite; }
+.text-gradient { color: inherit; }
+.skeleton { position: relative; overflow: hidden; background: rgba(255,250,240,.05); border-radius: .25rem; }
+.skeleton::after { content: ""; position: absolute; inset: 0; transform: translateX(-100%);
+  background: linear-gradient(90deg, transparent, rgba(255,250,240,.06), transparent); animation: shimmer 1.6s infinite; }
+.lift { transition: border-color .15s ease; }
+.lift:hover { border-color: rgba(255,250,240,.22); }
+
+/* highlighter swash behind a word — the one decorative flourish */
+.marker { background: linear-gradient(transparent 58%, rgba(245,213,71,.5) 58%, rgba(245,213,71,.5) 92%, transparent 92%); padding: 0 .08em; }
+
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after { animation: none !important; transition: none !important; }
+}
+
+/* ---------- light theme: paper ---------- */
+html.light { color-scheme: light; }
+html.light body { background: #f6f3ec; color: #2b2823; }
+html.light .card { background: #fffefb; border-color: #e3ddd1; }
+html.light .lift:hover { border-color: #c9c0ae; }
+html.light .dark-only { display: none; }
+html.light .card-title { color: #1c1a16; }
+html.light .card-sub { color: #6b6458; }
+html.light .page-title { color: #1c1a16; }
+html.light .eyebrow { color: #857d70; }
+html.light .btn-primary { background: #1f1c18; color: #faf8f4; }
+html.light .btn-primary:hover { background: #3a352e; }
+html.light .btn-ghost { border-color: #d6cfc1; color: #2b2823; }
+html.light .btn-ghost:hover { background: #efe9dd; }
+html.light .skeleton { background: #ece6da; }
+html.light .marker { background: linear-gradient(transparent 58%, #f5d547 58%, #f5d547 92%, transparent 92%); }
+
+/* text — keep light text on ink-blue fills, on the primary button and on dark tooltips */
+html.light :is(.text-white, .text-slate-100):not(.bg-indigo-500):not(.bg-indigo-500 *):not(.btn-primary):not(.btn-primary *):not(.bg-slate-950\/95 *) { color: #1c1a16; }
+html.light .hover\:text-white:hover:not(.bg-indigo-500) { color: #1c1a16; }
+html.light .text-slate-200:not(.bg-slate-950\/95 *) { color: #2b2823; }
+html.light .text-slate-300:not(.bg-slate-950\/95 *) { color: #3f3b34; }
+html.light .text-slate-400:not(.bg-slate-950\/95 *) { color: #6b6458; }
+html.light .text-slate-500 { color: #857d70; }
+html.light .text-slate-600 { color: #a39b8d; }
+html.light .fill-white { fill: #1c1a16; }
+
+/* surfaces & rules */
+html.light .border-white\/5 { border-color: #eee8dc; }
+html.light .border-white\/10, html.light .border-white\/15 { border-color: #e3ddd1; }
+html.light .border-white\/20 { border-color: #d0c8b8; }
+html.light .bg-white\/5 { background-color: #f6f2ea; }
+html.light .bg-white\/10, html.light .hover\:bg-white\/10:hover, html.light .hover\:bg-white\/5:hover { background-color: #f0ebe1; }
+html.light .bg-slate-900, html.light .bg-slate-900\/80, html.light .bg-slate-900\/90 { background-color: #f6f2ea; }
+html.light .card { background-color: #fffefb; }
+html.light .bg-slate-950, html.light .bg-slate-950\/60, html.light .bg-slate-950\/40 { background-color: #fffefb; }
+html.light .bg-slate-800 { background-color: #e6e1d7; }
+html.light .bg-indigo-500\/15, html.light .bg-indigo-500\/20 { background-color: #e6edf7; }
+html.light :is(.text-emerald-300, .text-emerald-400) { color: #1f6b4a; }
+html.light :is(.text-amber-300) { color: #92590a; }
+html.light :is(.text-red-300, .text-red-200) { color: #a2271d; }
+html.light :is(.text-indigo-300, .text-indigo-400) { color: #24508f; }
+html.light :is(.text-sky-300) { color: #24508f; }
+html.light .recharts-cartesian-axis-tick-value, html.light .recharts-legend-item-text { fill: #857d70; color: #857d70 !important; }
+html.light .recharts-polar-angle-axis-tick-value { fill: #3f3b34; }
+html.light .recharts-label-list .fill-slate-300, html.light text.fill-slate-300 { fill: #3f3b34; }
+
+/* ---------- app shell: ink sidebar in both themes (custom classes, untouched by the light overrides) ---------- */
+.side { background: #1b1916; color: #d9d2c3; border-right: 1px solid rgba(255, 250, 240, .07); }
+.side-brand { font-family: Newsreader, Georgia, serif; font-size: 1.45rem; font-weight: 500; color: #f6f1e6; letter-spacing: -.01em; }
+html .side .side-brand .marker { color: #1b1916; background: #f5d547; padding: 0 .14em; margin-left: .04em; border-radius: 1px; }
+.side-section { font-size: 10px; font-weight: 500; letter-spacing: .14em; text-transform: uppercase; color: #7e776a; padding: 0 .75rem; }
+.side-link { display: flex; width: 100%; align-items: center; gap: .7rem; border-radius: .25rem; padding: .5rem .75rem;
+  font-size: .8125rem; color: #b8b0a1; transition: color .15s, background .15s; }
+.side-link:hover { color: #f6f1e6; background: rgba(255, 250, 240, .04); }
+.side-link-active { color: #f6f1e6; background: rgba(255, 250, 240, .06); box-shadow: inset 3px 0 0 #f5d547; }
+.side-foot { border-top: 1px solid rgba(255, 250, 240, .08); color: #d9d2c3; }
+.side-muted { color: #8a8375; }
+
+.topbar { background: #181613; border-bottom: 1px solid rgba(255, 250, 240, .08); }
+html.light .topbar { background: #f6f3ec; border-bottom-color: #e3ddd1; }
+
+/* ---------- underline tabs ---------- */
+.tabbar { border-bottom: 1px solid rgba(255, 250, 240, .1); }
+html.light .tabbar { border-bottom-color: #e3ddd1; }
+.tab { position: relative; display: inline-flex; align-items: center; gap: .5rem; padding: .7rem .1rem; margin-right: 1.6rem;
+  font-size: .875rem; color: #a69e8f; transition: color .15s; }
+.tab:hover { color: #f2efe8; }
+.tab[aria-selected="true"] { color: #f6f1e6; }
+.tab[aria-selected="true"]::after { content: ""; position: absolute; left: 0; right: 0; bottom: 0; height: 2px; background: #f6f1e6; }
+html.light .tab { color: #857d70; }
+html.light .tab:hover, html.light .tab[aria-selected="true"] { color: #1c1a16; }
+html.light .tab[aria-selected="true"]::after { background: #1c1a16; }
