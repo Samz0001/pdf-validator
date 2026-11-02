@@ -7,3 +7,5 @@ __pycache__/
 backend/data/
 .venv/
 .github/workflows/
+samples/cases/
+samples/correct.pdf
